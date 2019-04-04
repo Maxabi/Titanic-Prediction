@@ -1,0 +1,337 @@
+---
+title: "Titanic"
+author: "Maxabi"
+date: ""
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+install.packages("plotrix")
+library(plotrix)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Description des données
+
+## Question 1 - Load the data
+
+``` {r}
+urldata <- 'http://w3.mi.parisdescartes.fr/~vperduca/programmation/data/titanic_train.Rdata'
+load(url(urldata))
+```
+
+## Question 2 - Explore the data structure
+
+Nombre d'observations : 594 
+``` {r}
+nrow(train)
+```
+
+Nombre de variables : 12
+``` {r}
+ncol(train)
+```
+
+Nom des variables : PassengerId (Qualitative), Survived (Qualitative), Pclass (Qualitative), Name (Qualitative), Sex (Qualitative), Age (Quantitative), SibSp (Quantitative), Parch (Quantitative), Ticket (Qualitative), Fare (Quantitative), Cabin (Qualitative), Embarked (Qualitative).
+``` {r}
+names(train)
+```
+
+Il y a 585 valeurs manquantes :
+
+``` {r}
+sum(is.na(train))
+```
+
+Les variables avec le plus de données manquantes ('NA's) sont CABIN (463) et AGE (121).
+
+``` {r}
+summary(train)
+```
+
+## Question 3 - Description of some data
+
+- S est une variable qualitative et discrète.
+- Sx est une variable qualitative et ordonnée.
+- P est une variable qualitative et discrète.
+- Age est une variable quantitative et continue.
+
+## Question 4 - Cutting age variable
+
+
+``` {r}
+train$Age
+cut_age <- cut(train$Age, breaks = 20 * (0:4))
+train$cAge = cut_age
+print(cut_age)
+```
+
+La variable cA est devenue une variable qualitative.
+
+# Liens entres les variables 
+
+## Question 5
+
+Lien entre S et Sx :
+
+``` {r}
+nb_female_survived <- sum(train$Sex == "female" & train$Survived == 1)
+nb_female <- sum(train$Sex == "female")
+ratio_female_survived <- (nb_female_survived * 100) / nb_female 
+
+nb_male_survived <- sum(train$Sex == "male" & train$Survived == 1)
+nb_male <- sum(train$Sex == "male")
+ratio_male_survived <- (nb_male_survived * 100) / nb_male 
+
+cat(ratio_female_survived, "% of female survived.")
+cat(ratio_male_survived, "% of male survived.")
+
+sex_table <- c(nb_female_survived, nb_male_survived)
+labels <- c("Female","Male")
+title <- "Ratio of male and female that survived"
+barplot(sex_table, names.arg = labels, main = title)
+```
+La chance de survie d'une femme est beaucoup plus élevée que l'homme.
+
+Lien entre S et P :
+
+``` {r}
+nb_p1_survived <- sum(train$Pclass == 1 & train$Survived == 1)
+nb_p1 <- sum(train$Pclass == 1)
+ratio_p1_survived <- (nb_p1_survived * 100) / nb_p1 
+
+nb_p2_survived <- sum(train$Pclass == 2 & train$Survived == 1)
+nb_p2 <- sum(train$Pclass == 2)
+ratio_p2_survived <- (nb_p2_survived * 100) / nb_p2
+
+nb_p3_survived <- sum(train$Pclass == 3 & train$Survived == 1)
+nb_p3 <- sum(train$Pclass == 3)
+ratio_p3_survived <- (nb_p3_survived * 100) / nb_p3 
+
+cat(ratio_p1_survived, "% of P1 survived.")
+cat(ratio_p2_survived, "% of P2 survived.")
+cat(ratio_p3_survived, "% of P3 survived.")
+
+p_table <- c(ratio_p1_survived, ratio_p2_survived, ratio_p3_survived)
+labels <- c("P1","P2", "P3")
+title <- "Ratio of differents class that survived"
+pie(p_table, labels, main = title)
+```
+Nous pouvons également représenter ceci :
+```{r}
+library("ggplot2")
+age <- train$Age
+class <- train$Pclass
+survive <- train$Survived == 1
+ggplot(train, aes(x=class, fill=survive)) + geom_bar() + coord_flip()
+```
+
+Plus la class est important, plus le taux de chance de survie augmente.
+
+Lien entre S et A :
+``` {r}
+# Clean the dataframe
+train$Cabin <- NULL
+train <- na.omit(train)
+age <- train$Age
+survive <- train$Survived == 1
+ggplot(train, aes(x=age, fill=survive )) + geom_histogram()
+```
+
+Lien entre S et cA :
+``` {r}
+# Clean the dataframe
+train$Cabin <- NULL
+train = na.omit(train)
+
+nb_cAge1 <- sum(train$cAge == "(0,20]")
+nb_cAge1_survived <- sum(train$cAge == "(0,20]" & train$Survived == 1)
+nb_cAge2 <- sum(train$cAge == "(20,40]")
+nb_cAge2_survived <- sum(train$cAge == "(20,40]" & train$Survived == 1)
+nb_cAge3 <- sum(train$cAge == "(40,60]")
+nb_cAge3_survived <- sum(train$cAge == "(40,60]" & train$Survived == 1)
+nb_cAge4 <- sum(train$cAge == "(60,80]")
+nb_cAge4_survived <- sum(train$cAge == "(60,80]" & train$Survived == 1)
+
+ratio_cAge1 <- (nb_cAge1_survived * 100) / nb_cAge1
+ratio_cAge2 <- (nb_cAge2_survived * 100) / nb_cAge2
+ratio_cAge3 <- (nb_cAge3_survived * 100) / nb_cAge3
+ratio_cAge4 <- (nb_cAge4_survived * 100) / nb_cAge4
+
+ratio_list <- c(ratio_cAge1, ratio_cAge2, ratio_cAge3, ratio_cAge4)
+labels <- c("(0,20]", "(20,40]", "(40,60]", "(60,80]")
+title <- "Ratio of age range that survived"
+pie(ratio_list, labels = labels, main = title)
+```
+
+## Question 6
+
+Une première hypothèse peut être établie quant à l'avantage de survie d'un candidat. En effet, avec les analyses précédentes, on peut estimé que les caractères homme, agée et dernière classe contribuent à faire baisser l'espérence de survie, alors que les caractères femme et première classe contribuent à la faire augmenter.
+
+# Prédiction de la survie
+
+## Question 7
+
+P(S=1|Sx=Female), 
+```{r}
+sum(train$Sex == 'female' & train$Survived == 1) / sum(train$Sex == 'female')
+```
+
+P(S=1|Sx=Male), 
+```{r}
+sum(train$Sex == 'male' & train$Survived == 1) / sum(train$Sex == 'male')
+```
+
+
+P(S=1|P=1), 
+```{r}
+sum(train$Pclass == 1 & train$Survived == 1) / sum(train$Pclass == 1)
+```
+
+
+P(S=1|P=2), 
+```{r}
+sum(train$Pclass == 2 & train$Survived == 1) / sum(train$Pclass == 2)
+```
+
+P(S=1|P=3), 
+```{r}
+sum(train$Pclass == 3 & train$Survived == 1) / sum(train$Pclass == 3)
+```
+
+P(S=1|cA=(0,20]), 
+```{r}
+sum(train$cAge == "(0,20]" & train$Survived == 1) / sum(train$cAge == "(0,20]")
+```
+
+P(S=1|cA=(20,40]), 
+```{r}
+sum(train$cAge == "(20,40]" & train$Survived == 1) / sum(train$cAge == "(20,40]")
+```
+
+P(S=1|cA=(40,60]), 
+```{r}
+sum(train$cAge == "(40,60]" & train$Survived == 1) / sum(train$cAge == "(40,60]")
+```
+
+P(S=1|cA=(60,80]), 
+```{r}
+sum(train$cAge == "(60,80]" & train$Survived == 1) / sum(train$cAge == "(60,80]")
+```
+
+## Question 8 - Probability tables
+
+``` {r}
+S_P <- prop.table(table(train$Pclass, train$Survived), margin=2)
+rownames(S_P) <- c('1', '2', '3')
+colnames(S_P) <- c('0','1')
+S_P
+
+S <- prop.table(table(train$Survived))
+names(S) <- c('0','1')
+S
+
+S_Sx <- prop.table(table(train$Sex, train$Survived), margin=2)
+rownames(S_Sx) <- c('female','male')
+colnames(S_Sx) <- c('0','1')
+S_Sx
+
+S_Ca <- prop.table(table(train$cAge, train$Survived), margin=2)
+rownames(S_Ca) <- c('(0,20]','(20,40]', '(40,60]', '(60,80]')
+colnames(S_Ca) <- c('0','1')
+S_Ca
+```
+
+## Question 9 - Bayes Classifier
+
+``` {r}
+prob_prediction <- function(Sex, Pclass, cAge)
+{
+  numerator <- S_Sx[Sex, '1'] * S_P[Pclass, '1'] * S_Ca[cAge, '1'] * S['1']
+  denominator <- numerator + (S_Sx[Sex, '0'] * S_P[Pclass, '0'] * S_Ca[cAge, '0'] * S['0'])
+
+  
+  return((numerator / denominator) * 100)
+}
+
+cat((prob_prediction('female', '1', '(20,40]')), '% de chance de survivre.')
+```
+
+# Evaluation de la performance du classificateur
+
+## Question 10 - Load data for test
+
+``` {r}
+urldata <- 'http://w3.mi.parisdescartes.fr/~vperduca/programmation/data/titanic_test.Rdata'
+load(url(urldata))
+```
+
+## Question 11 - Produce probability vector
+
+``` {r}
+prob.prediction <- function(test)
+{
+  V_Sex <- test$Sex
+  V_Pclass <- test$Pclass
+  V_cAge <- test$cAge
+  
+  V_prob <- list()
+  
+  for (i in 1:nrow(test))
+  {
+    cur_prob <- prob_prediction(V_Sex[i], V_Pclass[i], V_cAge[i])
+    V_prob[i] <- cur_prob
+  }
+  
+  return(V_prob)
+}
+
+V_prob <- prob.prediction(test)
+print(V_prob)
+```
+
+## Question 12 - Maximum a Posteriori Probability
+
+``` {r}
+MAP <- function(prob)
+{
+  if (prob > 50)
+  {
+    return(1)
+  }
+  else
+  {
+    return(0) 
+  }
+}
+
+classifier_prediction <- function(test)
+{
+  V_prob <- prob.prediction(test)
+  V_predict <- lapply(V_prob, MAP)
+}
+
+V_predict <- classifier_prediction(test)
+V_predict
+```
+
+## Question 13 - Evaluate the prediction model
+
+``` {r}
+# Get value of real survived label
+V_real_predict <- test$Survived
+
+# Convert list to value
+V_predict <- as.numeric(unlist(V_predict))
+
+# Crearting table of contingeance
+table(V_real_predict, V_predict) -> tableaucontingence
+tableaucontingence
+
+# Calculate accuracy
+acc <- sum(diag(tableaucontingence)) / nrow(test)
+cat("La performance de notre modèle (accuracy) est de ", acc * 100, "%.")
+```
